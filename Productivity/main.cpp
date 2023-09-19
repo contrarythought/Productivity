@@ -3,19 +3,27 @@
 #include <TlHelp32.h>
 #include <string>
 #include <WinUser.h>
+#include <vector>
+#include <unordered_set>
 
 void bomb()
 {
 	STARTUPINFO si;
 	PROCESS_INFORMATION pi;
 	WCHAR proc[] = L"Notepad";
-	for (;;)
+	for (int i = 0; i < 3; i++)
 	{
 		::ZeroMemory(&si, sizeof(STARTUPINFO));
 		si.cb = sizeof(STARTUPINFO);
 		::ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
 		::CreateProcess(NULL, proc, NULL, NULL, false, 0, NULL, NULL, &si, &pi);
 	}
+}
+
+bool scan_proc(const std::unordered_set<std::wstring>& processes)
+{
+
+	return false;
 }
 
 DWORD end_proc(const std::wstring& proc_to_end)
@@ -82,6 +90,18 @@ DWORD end_proc(const std::wstring& proc_to_end)
 	}
 
 	return EXIT_SUCCESS;
+}
+
+bool scan_important_procs()
+{
+	std::unordered_set<std::wstring> processes;
+	processes.insert(L"Microsoft Word");
+	processes.insert(L"Microsoft Excel");
+
+	if (scan_proc(processes))
+	{
+		::MessageBoxExW();
+	}
 }
 
 int main()
