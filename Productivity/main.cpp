@@ -20,10 +20,32 @@ void bomb()
 	}
 }
 
-bool scan_proc(const std::unordered_set<std::wstring>& processes)
+DWORD scan_proc(const std::unordered_set<std::wstring>& processes)
 {
+	HANDLE hProcessSnap = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hProcessSnap == INVALID_HANDLE_VALUE)
+		return ::GetLastError();
 
-	return false;
+	PROCESSENTRY32 pe32;
+	pe32.dwSize = sizeof(PROCESSENTRY32);
+
+	if (!::Process32First(hProcessSnap, &pe32))
+	{
+		::CloseHandle(hProcessSnap);
+		return ::GetLastError();
+	}
+
+	do
+	{
+		if (processes.find(pe32.szExeFile) != processes.end())
+		{
+			::CloseHandle(hProcessSnap);
+			return EXIT_SUCCESS;
+		}
+	} while (::Process32Next(hProcessSnap, &pe32));
+
+	::CloseHandle(hProcessSnap);
+	return EXIT_FAILURE;
 }
 
 DWORD end_proc(const std::wstring& proc_to_end)
@@ -62,12 +84,9 @@ DWORD end_proc(const std::wstring& proc_to_end)
 
 		do
 		{
-			// std::wcout << L"Looking at: " << pe32.szExeFile << std::endl;
-
 			HANDLE hProc = NULL;
 			if (!wcscmp(pe32.szExeFile, proc_to_end.c_str()))
 			{
-				std::wcout << L"detected: " << pe32.szExeFile << std::endl;
 				// end process
 				hProc = ::OpenProcess(PROCESS_TERMINATE, false, pe32.th32ProcessID);
 				if (hProc == INVALID_HANDLE_VALUE)
@@ -92,16 +111,18 @@ DWORD end_proc(const std::wstring& proc_to_end)
 	return EXIT_SUCCESS;
 }
 
-bool scan_important_procs()
+void scan_important_procs()
 {
 	std::unordered_set<std::wstring> processes;
-	processes.insert(L"Microsoft Word");
-	processes.insert(L"Microsoft Excel");
+	processes.insert(L"WINWORD.EXE");
+	processes.insert(L"EXCEL.EXE");
 
-	if (scan_proc(processes))
-	{
-		::MessageBoxExW();
-	}
+	if (!scan_proc(processes))
+		::MessageBoxExW(NULL, L"Save and close your work before it's too late", L"WARNING", MB_OK|MB_ICONWARNING, 0);
+
+	// block until user closes important processes
+	for (; scan_proc(processes) == EXIT_SUCCESS; )
+		;
 }
 
 int main()
@@ -111,7 +132,7 @@ int main()
 	if (end_proc(proc_to_end) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 
-	// TODO: allow user to save work before being destroyed
+	scan_important_procs();
 
 	bomb();
 	
