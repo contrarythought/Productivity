@@ -125,11 +125,11 @@ void scan_important_procs()
 		;
 }
 
-// TODO
+// TODO - test
 bool add_to_registry()
 {
-	HKEY hRoot = HKEY_LOCAL_MACHINE;
-	std::wstring subKey = L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+	HKEY h_root = HKEY_LOCAL_MACHINE;
+	std::wstring sub_key = L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 	std::wstring app_name = L"ProductivityApp";
 
 	// CHANGEME
@@ -140,27 +140,33 @@ bool add_to_registry()
 	LONG lResult;
 	
 	// check to see if exe already in registry
-	lResult = ::RegOpenKeyExW(hRoot, subKey.c_str(), 0, KEY_READ | KEY_WRITE, &hResult);
+	lResult = ::RegOpenKeyExW(h_root, sub_key.c_str(), 0, KEY_READ | KEY_WRITE, &hResult);
 	DWORD dwRegType = REG_SZ;
 
 
 	if (lResult == ERROR_SUCCESS)
 	{
-		lResult = ::RegGetValueW(hRoot, subKey.c_str(), app_name.c_str(), RRF_RT_REG_SZ, &dwRegType, (PVOID)exe_path.c_str(), &exe_path_size);
+		lResult = ::RegGetValueW(h_root, sub_key.c_str(), app_name.c_str(), RRF_RT_REG_SZ, &dwRegType, (PVOID)exe_path.c_str(), &exe_path_size);
 		if (lResult == ERROR_SUCCESS)
-			return true;
-		else
 		{
-			if (lResult == ERROR_MORE_DATA)
+			::RegCloseKey(hResult);
+			return true;
+		}
+		else if (lResult == ERROR_FILE_NOT_FOUND)
+		{
+			lResult = ::RegSetValueW(hResult, sub_key.c_str(), REG_SZ, exe_path.c_str(), NULL);
+			if (lResult != ERROR_SUCCESS)
 			{
-				std::wcerr << L"pvData too small to receive data" << std::endl;
+				::RegCloseKey(hResult);
+				std::wcerr << L"Error setting registry value: " << ::GetLastError() << std::endl;
 				return false;
 			}
-				
-			if (lResult == ERROR_FILE_NOT_FOUND)
-			{
-				// create key and value
-			}
+		}
+		else
+		{
+			::RegCloseKey(hResult);
+			std::wcerr << L"Error getting value: " << ::GetLastError() << std::endl;
+			return false;
 		}
 	}
 	
@@ -171,9 +177,11 @@ int main()
 {
 	std::wstring proc_to_end = L"hl2.exe";
 
+	/*
 	if (!add_to_registry())
 		return EXIT_FAILURE;
-	
+	*/
+
 	if (end_proc(proc_to_end) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 
