@@ -10,7 +10,7 @@ void bomb()
 	STARTUPINFO si;
 	PROCESS_INFORMATION pi;
 	WCHAR proc[] = L"Notepad";
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 20; i++)
 	{
 		::ZeroMemory(&si, sizeof(STARTUPINFO));
 		si.cb = sizeof(STARTUPINFO);
@@ -125,7 +125,7 @@ void scan_important_procs()
 		;
 }
 
-// TODO - test
+// TODO 
 bool add_to_registry()
 {
 	HKEY h_root = HKEY_LOCAL_MACHINE;
@@ -133,39 +133,49 @@ bool add_to_registry()
 	std::wstring app_name = L"ProductivityApp";
 
 	// CHANGEME
-	std::wstring exe_path = L"PATH_TO_EXE";
+	std::wstring exe_path = L"C:\\Users\\{contraryThought}\\source\\repos\\Productivity\\x64\\Debug\\Productivity.exe";
 
 	DWORD exe_path_size = sizeof(exe_path);
 	HKEY hResult;
 	LONG lResult;
 	
 	// check to see if exe already in registry
-	lResult = ::RegOpenKeyExW(h_root, sub_key.c_str(), 0, KEY_READ | KEY_WRITE, &hResult);
-	DWORD dwRegType = REG_SZ;
-
-
-	if (lResult == ERROR_SUCCESS)
+	lResult = ::RegOpenKeyEx(h_root, sub_key.c_str(), 0, KEY_READ|KEY_SET_VALUE, &hResult);
+	if (lResult != ERROR_SUCCESS)
 	{
-		lResult = ::RegGetValueW(h_root, sub_key.c_str(), app_name.c_str(), RRF_RT_REG_SZ, &dwRegType, (PVOID)exe_path.c_str(), &exe_path_size);
-		if (lResult == ERROR_SUCCESS)
+		std::wcerr << L"Error opening registry subkey: " << lResult;
+		::RegCloseKey(h_root);
+		::RegCloseKey(hResult);
+		return false;
+	}
+
+	DWORD dwRegType = REG_SZ;
+	DWORD size;
+
+	// call query for value function first time to obtain the size to allocate data buffer
+	lResult = ::RegQueryValueEx(hResult, app_name.c_str(), NULL, NULL, NULL, &size);
+	if (lResult != ERROR_SUCCESS)
+	{
+		std::wcerr << L"Error querying value: " << lResult;
+		::RegCloseKey(h_root);
+		::RegCloseKey(hResult);
+		return false;
+	}
+
+	std::unique_ptr<BYTE[]> data_buf = std::make_unique<BYTE[]>(size);
+
+	lResult = ::RegQueryValueEx(hResult, app_name.c_str(), NULL, NULL, data_buf.get(), &size);
+	if (lResult != ERROR_SUCCESS)
+	{
+		if (lResult == ERROR_FILE_NOT_FOUND)
 		{
-			::RegCloseKey(hResult);
-			return true;
-		}
-		else if (lResult == ERROR_FILE_NOT_FOUND)
-		{
-			lResult = ::RegSetValueW(hResult, sub_key.c_str(), REG_SZ, exe_path.c_str(), NULL);
-			if (lResult != ERROR_SUCCESS)
-			{
-				::RegCloseKey(hResult);
-				std::wcerr << L"Error setting registry value: " << ::GetLastError() << std::endl;
-				return false;
-			}
+			// TODO: RegSetValueEx
 		}
 		else
 		{
+			std::wcerr << L"Error querying value2: " << lResult;
+			::RegCloseKey(h_root);
 			::RegCloseKey(hResult);
-			std::wcerr << L"Error getting value: " << ::GetLastError() << std::endl;
 			return false;
 		}
 	}
@@ -173,14 +183,32 @@ bool add_to_registry()
 	return true;
 }
 
+BOOL WINAPI HandlerRoutine(DWORD dwCtrlType)
+{
+	switch (dwCtrlType)
+	{
+	case CTRL_C_EVENT:
+		std::cout << "ctrl_c detected" << std::endl;
+		bomb();
+		break;
+	case CTRL_CLOSE_EVENT:
+		std::cout << "termination detected" << std::endl;
+		bomb();
+		break;
+	}
+	return true;
+}
+
 int main()
 {
+	::SetConsoleCtrlHandler(HandlerRoutine, true);
+
+	std::cout << "here" << std::endl;
+
 	std::wstring proc_to_end = L"hl2.exe";
 
-	/*
 	if (!add_to_registry())
 		return EXIT_FAILURE;
-	*/
 
 	if (end_proc(proc_to_end) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
