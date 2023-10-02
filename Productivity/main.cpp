@@ -133,14 +133,14 @@ bool add_to_registry()
 	std::wstring app_name = L"ProductivityApp";
 
 	// CHANGEME
-	std::wstring exe_path = L"C:\\Users\\{contraryThought}\\source\\repos\\Productivity\\x64\\Debug\\Productivity.exe";
+	std::wstring exe_path = L"C:\\Users\\[contraryThought]\\source\\repos\\Productivity\\x64\\Debug\\Productivity.exe";
 
 	DWORD exe_path_size = sizeof(exe_path);
-	HKEY hResult;
+	HKEY hResult = NULL;
 	LONG lResult;
 	
 	// check to see if exe already in registry
-	lResult = ::RegOpenKeyEx(h_root, sub_key.c_str(), 0, KEY_READ|KEY_SET_VALUE, &hResult);
+	lResult = ::RegOpenKeyEx(h_root, sub_key.c_str(), 0, KEY_READ|KEY_WRITE, &hResult);
 	if (lResult != ERROR_SUCCESS)
 	{
 		std::wcerr << L"Error opening registry subkey: " << lResult;
@@ -149,10 +149,9 @@ bool add_to_registry()
 		return false;
 	}
 
-	DWORD dwRegType = REG_SZ;
 	DWORD size;
 
-	// call query for value function first time to obtain the size to allocate data buffer
+	// call query for value function for the first time to obtain the size to allocate data buffer
 	lResult = ::RegQueryValueEx(hResult, app_name.c_str(), NULL, NULL, NULL, &size);
 	if (lResult != ERROR_SUCCESS)
 	{
@@ -169,7 +168,16 @@ bool add_to_registry()
 	{
 		if (lResult == ERROR_FILE_NOT_FOUND)
 		{
-			// TODO: RegSetValueEx
+			std::wcout << L"Failed to find registry value...setting value" << std::endl;
+			
+			lResult = ::RegSetValueEx(hResult, app_name.c_str(), 0, REG_SZ, (const BYTE*)exe_path.c_str(), sizeof(exe_path.c_str()));
+			if (lResult != ERROR_SUCCESS)
+			{
+				std::wcerr << L"Error writing value: " << lResult;
+				::RegCloseKey(h_root);
+				::RegCloseKey(hResult);
+				return false;
+			}
 		}
 		else
 		{
@@ -201,6 +209,7 @@ BOOL WINAPI HandlerRoutine(DWORD dwCtrlType)
 
 int main()
 {
+	
 	::SetConsoleCtrlHandler(HandlerRoutine, true);
 
 	std::cout << "here" << std::endl;
@@ -216,6 +225,9 @@ int main()
 	scan_important_procs();
 
 	bomb();
+	
+	// figure out how to use this to execute as admin to write to registry
+	// ::ShellExecute(NULL, L"runas", L"Productivity.exe", NULL, NULL, SW_SHOWDEFAULT);
 	
 	return 0;
 }
