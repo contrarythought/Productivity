@@ -133,7 +133,7 @@ bool add_to_registry()
 	std::wstring app_name = L"ProductivityApp";
 
 	// CHANGEME
-	std::wstring exe_path = L"C:\\Users\\[contraryThought]\\source\\repos\\Productivity\\x64\\Debug\\Productivity.exe";
+	std::wstring exe_path = L"C:\\Users\\Anthony\\source\\repos\\Productivity\\x64\\Debug\\Productivity.exe";
 
 	DWORD exe_path_size = sizeof(exe_path);
 	HKEY hResult = NULL;
@@ -207,8 +207,30 @@ BOOL WINAPI HandlerRoutine(DWORD dwCtrlType)
 	return true;
 }
 
+bool elevated()
+{
+
+}
+
+bool is_admin()
+{
+
+}
+
 int main()
 {
+	if (!is_admin())
+		if (!elevated())
+		{
+			std::wcerr << L"Failed to gain administrator access" << std::endl;
+			exit(1);
+		}
+			
+	char path[MAX_PATH] = { 0 };
+	DWORD len;
+	len = ::GetModuleFileNameA(NULL, (LPSTR)path, MAX_PATH);
+	std::cout << path << std::endl;
+	::ShellExecuteA(NULL, "runas", (LPCSTR)path, NULL, NULL, 1);
 	
 	::SetConsoleCtrlHandler(HandlerRoutine, true);
 
@@ -225,9 +247,6 @@ int main()
 	scan_important_procs();
 
 	bomb();
-	
-	// figure out how to use this to execute as admin to write to registry
-	// ::ShellExecute(NULL, L"runas", L"Productivity.exe", NULL, NULL, SW_SHOWDEFAULT);
 	
 	return 0;
 }
