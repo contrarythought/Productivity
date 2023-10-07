@@ -133,7 +133,7 @@ bool add_to_registry()
 	std::wstring app_name = L"ProductivityApp";
 
 	// CHANGEME
-	std::wstring exe_path = L"C:\\Users\\Anthony\\source\\repos\\Productivity\\x64\\Debug\\Productivity.exe";
+	std::wstring exe_path = L"C:\\Users\\[contraryThought]\\source\\repos\\Productivity\\x64\\Debug\\Productivity.exe";
 
 	DWORD exe_path_size = sizeof(exe_path);
 	HKEY hResult = NULL;
