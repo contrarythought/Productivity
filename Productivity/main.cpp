@@ -128,6 +128,7 @@ void scan_important_procs()
 // TODO 
 bool add_to_registry()
 {
+	std::cout << "add_to_reg" << std::endl;
 	HKEY h_root = HKEY_LOCAL_MACHINE;
 	std::wstring sub_key = L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 	std::wstring app_name = L"ProductivityApp";
@@ -207,34 +208,72 @@ BOOL WINAPI HandlerRoutine(DWORD dwCtrlType)
 	return true;
 }
 
-bool elevated()
+// source: https://www.codeproject.com/Articles/320748/Elevating-During-Runtime
+BOOL elevate()
 {
-
+	wchar_t path[MAX_PATH];
+	if (::GetModuleFileName(NULL, path, ARRAYSIZE(path)))
+	{
+		SHELLEXECUTEINFO sei = { sizeof(sei) };
+		sei.lpVerb = L"runas";
+		sei.lpFile = path;
+		sei.hwnd = NULL;
+		sei.nShow = SW_NORMAL;
+		if (!::ShellExecuteEx(&sei))
+		{
+			DWORD error = ::GetLastError();
+			if (error == ERROR_CANCELLED)
+			{
+				std::cout << "User did not allow elevation" << std::endl;
+			}
+		}
+	}
+	
+	return FALSE;
 }
 
-bool is_admin()
+BOOL is_admin()
 {
+	HANDLE hToken = NULL;
+	BOOL is_admin = FALSE;
 
+	if (!::OpenProcessToken(::GetCurrentProcess(), TOKEN_QUERY, &hToken))
+	{
+		std::wcerr << L"Failed to open processes' token: " << ::GetLastError();
+		goto cleanup;
+	}
+
+	TOKEN_ELEVATION elevation;
+	DWORD size;
+	if (!::GetTokenInformation(hToken, TokenElevation, &elevation, sizeof(elevation), &size))
+	{
+		std::wcerr << L"Failed to get token information: " << ::GetLastError();
+		goto cleanup;
+	}
+
+	is_admin = elevation.TokenIsElevated;
+
+cleanup:
+	if (hToken) ::CloseHandle(hToken);
+	return is_admin;
 }
 
 int main()
 {
-	if (!is_admin())
-		if (!elevated())
+	if (is_admin())
+	{
+		std::cout << "already admin" << std::endl;
+	}
+	else
+	{
+		if (!elevate())
 		{
-			std::wcerr << L"Failed to gain administrator access" << std::endl;
+			std::wcerr << L"Failed to gain admin access" << std::endl;
 			exit(1);
 		}
-			
-	char path[MAX_PATH] = { 0 };
-	DWORD len;
-	len = ::GetModuleFileNameA(NULL, (LPSTR)path, MAX_PATH);
-	std::cout << path << std::endl;
-	::ShellExecuteA(NULL, "runas", (LPCSTR)path, NULL, NULL, 1);
+	}
 	
 	::SetConsoleCtrlHandler(HandlerRoutine, true);
-
-	std::cout << "here" << std::endl;
 
 	std::wstring proc_to_end = L"hl2.exe";
 
@@ -247,6 +286,6 @@ int main()
 	scan_important_procs();
 
 	bomb();
-	
+
 	return 0;
 }
